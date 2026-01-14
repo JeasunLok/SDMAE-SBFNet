@@ -9,15 +9,13 @@ train_percent = 0.7
 val_percent = 0.1
 test_percent = 0.2
 
-data_path = '/home/ljs/PRD-RSMAE/PRD-RSMAE/data/segmentation'
+data_path = './data/segmentation'
 
 if __name__ == "__main__":
     random.seed(0)
     print("Generate txt for trainning, validating and testing in data folder.")
-    # segfilepath = os.path.join(data_path, "labels")
-    # segfilepath = r"/mnt/ImarsData/ljs/PRD289K_Annotation/label
-    segfilepath = r"/mnt/ImarsData/ljs/datasets/LoveDA/label"
-    saveBasePath = os.path.join(data_path, "list")
+    segfilepath = r"/public/home/luojunshen/data/datasets/VHR/PRDLC-PRO/label"
+    saveBasePath = os.path.join(data_path, "PRDLC-PRO")
     
     temp_seg = os.listdir(segfilepath)
     total_seg = []
