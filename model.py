@@ -729,43 +729,49 @@ if __name__ == '__main__':
 
     elif model_type == "SBFNet":
         print("SBFNet")
-        img = torch.rand(2, 3, 512, 512)
+        from thop import profile
+        
+        # 创建模型
         encoder = MAE_Encoder(patch_size=32)
-        model = SDSBFNet(encoder, out_channels=10, downsample_factor=16)
-        output = model(img)
-        print(output.shape)
+        model = SBFNet(encoder, out_channels=10, downsample_factor=16)
+        
+        # 计算参数量
+        total_params = sum(p.numel() for p in model.parameters())
+        print(f"Params: {total_params / 1e6:.2f}M")
+        
+        # 计算FLOPs
+        with torch.no_grad():
+            input_tensor = torch.randn(1, 3, 512, 512)
+            flops, _ = profile(model, inputs=(input_tensor,), verbose=False)
+            print(f"FLOPs: {flops / 1e9:.2f}G")
+            
+            # # 测试输出
+            # output = model(input_tensor)
+            # print(f"Output shape: {output.shape}")
     
     elif model_type == "SDSBFNet":
         print("SDSBFNet")
-        img = torch.rand(2, 3, 512, 512)
-        v_img = torch.rand(2, 1, 512, 512)
+        from thop import profile
+        
+        # 创建模型
         encoder = SDMAE_Encoder(patch_size=32)
         model = SDSBFNet(encoder, out_channels=10, downsample_factor=16)
-        output = model(img, v_img)
-        print(output[0].shape)
+        
+        # 计算参数量
+        total_params = sum(p.numel() for p in model.parameters())
+        print(f"Params: {total_params / 1e6:.2f}M")
+        
+        # 计算FLOPs (注意SDSBFNet需要两个输入)
+        with torch.no_grad():
+            input_tensor = torch.randn(1, 3, 512, 512)
+            v_input_tensor = torch.randn(1, 1, 512, 512)
+            flops, _ = profile(model, inputs=(input_tensor, v_input_tensor), verbose=False)
+            print(f"FLOPs: {flops / 1e9:.2f}G")
+            
+            # # 测试输出
+            # output = model(input_tensor, v_input_tensor)
+            # print(f"Output shape: {output[0].shape if isinstance(output, (list, tuple)) else output.shape}")
+            
     else:
         raise ValueError("model_type can only be Pretrained, Classify or Segmentation.")
 
-# def mae_vit_base_patch16_dec512d8b(**kwargs):
-#     model = MaskedAutoencoderViT(
-#         patch_size=16, embed_dim=768, depth=12, num_heads=12,
-#         decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16,
-#         mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
-#     return model
-
-
-# def mae_vit_large_patch16_dec512d8b(**kwargs):
-#     model = MaskedAutoencoderViT(
-#         patch_size=16, embed_dim=1024, depth=24, num_heads=16,
-#         decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16,
-#         mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
-#     return model
-
-
-# def mae_vit_huge_patch14_dec512d8b(**kwargs):
-#     model = MaskedAutoencoderViT(
-#         patch_size=14, embed_dim=1280, depth=32, num_heads=16,
-#         decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16,
-#         mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
-#     return model
-    
