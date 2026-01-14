@@ -13,10 +13,10 @@ from tqdm import tqdm
 from dataloader import *
 from model import *
 from torch.utils.data import DataLoader
+
 import torch.distributed as dist
 from torch.cuda.amp import GradScaler
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1' 
 
 #-------------------------------------------------------------------------------
 # train model
@@ -40,6 +40,8 @@ def train_epoch(model, train_loader, criterion, optimizer, e, epoch, device, num
         if fp16:
             with torch.cuda.amp.autocast():
                 batch_prediction, out, embedding = model(batch_data, batch_data_hsv)
+                # with torch.cuda.amp.autocast(enabled=False):
+                #     loss = criterion(batch_prediction.float(), batch_label)  # 确保损失计算用FP32
                 loss = criterion(batch_prediction, batch_label)
 
             scaler.scale(loss).backward()
@@ -161,16 +163,15 @@ if __name__ == "__main__":
     distributed = True
     sync_bn = True
     fp16 = True
-    test = False
+    test = True
 
-    num_classes = 7 # LoveDA:7 DLRSD:17 WHDLD:6
+    num_classes = 8 # LoveDA:7 DLRSD:17 WHDLD:6 PRDLC:8
 
-    model_pretrained = True
-    model_path = r"/home/ljs/PRD-RSMAE/PRD-RSMAE/checkpoints/segmentation/2025-01-27-00-51-58_pretrained_SDMAE_50_100/model_state_dict_loss0.1535_epoch50.pth"
-    encoder_pretrained = False
-    encoder_path = r"checkpoints/PRD289K/sdmae/vit-b-sdmae-50.pt"
+    model_pretrained = False
+    model_path = r""
+    encoder_pretrained = True
+    encoder_path = r"checkpoints/PRD289K/sdmae/vit-b-sdmae-100.pt"
     freeze_encoder = False
-    
 
     input_shape = [512, 512]
     epoch = 100
@@ -223,7 +224,7 @@ if __name__ == "__main__":
     if encoder_pretrained:
         if local_rank == 0:
             print('Load weights {}.'.format(encoder_path))
-        ddp_model = torch.load(encoder_path)
+        ddp_model = torch.load(encoder_path, map_location='cuda')
         state_dict = ddp_model.state_dict()
         encoder_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items() if "encoder" in k}
         model.load_state_dict(encoder_state_dict, strict=False)
@@ -382,4 +383,4 @@ if __name__ == "__main__":
         print("save test result successfully")
         print("===============================================================================") 
 
-# torchrun --nproc_per_node=4 train_SDSBFNet.py
+# torchrun --nproc_per_node=2 train_SDSBFNet.py

@@ -15,7 +15,7 @@ from model import *
 from torch.utils.data import DataLoader
 import torch.distributed as dist
 from torch.cuda.amp import GradScaler
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
 #-------------------------------------------------------------------------------
 # train model
@@ -38,7 +38,9 @@ def train_epoch(model, train_loader, criterion, optimizer, e, epoch, device, num
         if fp16:
             with torch.cuda.amp.autocast():
                 batch_prediction, out, embedding = model(batch_data)
-                loss = criterion(batch_prediction, batch_label)
+                with torch.cuda.amp.autocast(enabled=False):
+                    loss = criterion(batch_prediction.float(), batch_label)  # 确保损失计算用FP32
+                # loss = criterion(batch_prediction, batch_label)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -159,12 +161,12 @@ if __name__ == "__main__":
     fp16 = True
     test = True
 
-    num_classes = 6 # LoveDA:7 DLRSD:17 WHDLD:6
+    num_classes = 8 # LoveDA:7 DLRSD:17 WHDLD:6 PRDLC:8
 
     model_pretrained = True
-    model_path = r"/home/ljs/PRD-RSMAE/PRD-RSMAE/checkpoints/segmentation/2025-01-27-13-18-06/model_state_dict_loss0.1433_epoch5.pth"
-    encoder_pretrained = True
-    encoder_path = r"checkpoints/PRD289K/mae/vit-b-mae-50.pt"
+    model_path = r""
+    encoder_pretrained = False
+    encoder_path = r"checkpoints/PRD289K/mae/vit-b-mae-100.pt"
     freeze_encoder = False
     
     input_shape = [512, 512]
@@ -218,7 +220,7 @@ if __name__ == "__main__":
     if encoder_pretrained:
         if local_rank == 0:
             print('Load weights {}.'.format(encoder_path))
-        ddp_model = torch.load(encoder_path)
+        ddp_model = torch.load(encoder_path, map_location='cuda')
         state_dict = ddp_model.state_dict()
         encoder_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items() if "encoder" in k}
         model.load_state_dict(encoder_state_dict, strict=False)
@@ -328,7 +330,7 @@ if __name__ == "__main__":
             print("start training")
         epoch_result = np.zeros([4, epoch])
         best_loss = 1e9
-        for e in range(epoch):
+        for e in range(0, epoch):
             model_train.train()
             train_acc, train_mIoU, train_loss = train_epoch(model_train, train_loader, criterion, optimizer, e, epoch, device, num_classes, scaler, fp16, ignore_index=ignore_index)
             scheduler.step()
@@ -377,4 +379,5 @@ if __name__ == "__main__":
         print("save test result successfully")
         print("===============================================================================") 
 
-# torchrun --nproc_per_node=4 train_SBFNet.py
+# torchrun --nproc_per_node=2 train_SBFNet.py
+# torchrun --master_port 29501 --nproc_per_node=2 train_SBFNet.py

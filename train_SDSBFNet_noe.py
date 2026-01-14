@@ -15,7 +15,7 @@ from model import *
 from torch.utils.data import DataLoader
 import torch.distributed as dist
 from torch.cuda.amp import GradScaler
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
 
 #-------------------------------------------------------------------------------
@@ -40,7 +40,9 @@ def train_epoch(model, train_loader, criterion, optimizer, e, epoch, device, num
         if fp16:
             with torch.cuda.amp.autocast():
                 batch_prediction, out, embedding = model(batch_data, batch_data_hsv)
-                loss = criterion(batch_prediction, batch_label)
+                with torch.cuda.amp.autocast(enabled=False):
+                    loss = criterion(batch_prediction.float(), batch_label)  # 确保损失计算用FP32
+                # loss = criterion(batch_prediction, batch_label)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -163,10 +165,10 @@ if __name__ == "__main__":
     fp16 = True
     test = False
 
-    num_classes = 17 # LoveDA:7 DLRSD:17 WHDLD:6
+    num_classes = 8 # LoveDA:7 DLRSD:17 WHDLD:6 PRDLC:8
 
     model_pretrained = False
-    model_path = r"/home/ljs/PRD-RSMAE/PRD-RSMAE/checkpoints/segmentation/2025-01-26-21-41-50_WHDLD_pretrained_SDMAEnoe_100_100/model_state_dict_loss0.1507_epoch20.pth"
+    model_path = r""
     encoder_pretrained = True
     encoder_path = r"checkpoints/PRD289K/sdmae_noe/vit-b-sdmae-noe-100-dict.pth"
     freeze_encoder = False
@@ -175,7 +177,7 @@ if __name__ == "__main__":
     input_shape = [512, 512]
     epoch = 100
     save_period = 5
-    batch_size = 64
+    batch_size = 8
     ignore_index = 0
 
     if ignore_index == 0:
@@ -385,4 +387,4 @@ if __name__ == "__main__":
         print("save test result successfully")
         print("===============================================================================") 
 
-# torchrun --nproc_per_node=4 train_SDSBFNet_noe.py
+# torchrun --nproc_per_node=2 train_SDSBFNet_noe.py

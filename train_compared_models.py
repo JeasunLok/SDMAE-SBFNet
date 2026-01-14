@@ -160,25 +160,25 @@ if __name__ == "__main__":
     distributed = True
     sync_bn = True
     fp16 = True
-    test = True
+    test = False
 
-    num_classes = 6 # LoveDA:7 DLRSD:17 WHDLD:6 PRDLC:8
+    num_classes = 8 # LoveDA:7 DLRSD:17 WHDLD:6 PRDLC:8
 
-    model_type = "PSPNet"
-    model_pretrained = True
-    model_path = r"checkpoints/segmentation/3_Compared_Models/2025-10-15-03-53-09_WHDLD_PSPNet/model_state_dict_loss0.2192_epoch25.pth"
+    model_type = "UNet"
+    model_pretrained = False
+    model_path = r""
     
     input_shape = [512, 512]
-    epoch = 20
-    save_period = 1
-    batch_size = 4 # 4 for SETR and SegFormer
+    epoch = 100
+    save_period = 5
+    batch_size = 8 # 4 for SETR and SegFormer
     ignore_index = 0
 
     if ignore_index == 0:
         num_classes = num_classes + 1
 
     # 学习率
-    lr = 5e-5 # 5e-6 for SETR and SegFormer
+    lr = 1e-4 # 5e-6 for SETR and SegFormer
     min_lr = lr*0.01
 
     # 优化器
