@@ -1,39 +1,73 @@
-### Implementation of [*KaiMing He el.al. Masked Autoencoders Are Scalable Vision Learners*](https://arxiv.org/abs/2111.06377).
+# BTCDNet: Bayesian Tile Attention Network for Hyperspectral Image Change Detection
 
-Due to limit resource available, we only test the model on cifar10. We mainly want to reproduce the result that **pre-training an ViT with MAE can achieve a better result than directly trained in supervised learning with labels**. This should be an evidence of **self-supervised learning is more data efficient than supervised learning**.
+***
+# Introduction
 
-We mainly follow the implementation details in the paper. However, due to difference between Cifar10 and ImageNet, we make some modification:
-- we use vit-tiny instead of vit-base.
-- since Cifar10 have only 50k training data, we increase the pretraining epoch from 400 to 2000, and the warmup epoch from 40 to 200. We noticed that, the loss is still decreasing after 2000 epoches.
-- we decrease the batch size for training the classifier from 1024 to 128 to mitigate the overfitting.
+<!-- <b> Official implementation of [SDMAE-SBFNet](https://ieeexplore.ieee.org/document/10975807) by [Junshen Luo](https://github.com/JeasunLok), Jiahe Li, Xinlin Chu, Sai Yang, Lingjun Tao and Qian Shi. </b> -->
+<b> Official implementation of SDMAE-SBFNet by [Junshen Luo](https://github.com/JeasunLok). </b>
+***
 
-### Installation
-`pip install -r requirements.txt`
+<!-- ![](images/btcdnet.png) -->
 
-### Run
-```bash
-# pretrained with mae
-python mae_pretrain.py
-
-# train classifier from scratch
-python train_classifier.py
-
-# train classifier from pretrained model
-python train_classifier.py --pretrained_model_path vit-t-mae.pt --output_model_path vit-t-classifier-from_pretrained.pt
+***
+## How to use it?
+### 1. Installation
+```
+git clone https://github.com/JeasunLok/SDMAE-SBFNet.git && cd SDMAE-SBFNet
+conda create -n SDMAE-SBFNet python=3.11
+conda activate SDMAE-SBFNet
+pip install -r requirements.txt
 ```
 
-See logs by `tensorboard --logdir logs`.
+### 2. Download our datasets
 
-### Result
-|Model|Validation Acc|
-|-----|--------------|
-|ViT-T w/o pretrain|74.13|
-|ViT-T w/  pretrain|**89.77**|
+Download our datasets then place them in the correct path of `data` folder:
 
-Weights are in [github release](https://github.com/IcarusWizard/MAE/releases/tag/cifar10). You can also view the tensorboard logs at [tensorboard.dev](https://tensorboard.dev/experiment/zngzZ89bTpyM1B2zVrD7Yw/#scalars).
+Baiduyun:
 
-Visualization of the first 16 images on Cifar10 validation dataset:
+Zenorg:
 
-![avatar](pic/mae-cifar10-reconstruction.png)
+And run `generate_list_pretrained.py` or `generate_list_pretrained.py` to generate the data lists.
 
-### TO DO LIST
+### 3. Quick start to use our pretraining model SDMAE
+
+<b> You should change the settings in `sdmae_pretrain_ddp.py` then: </b>
+```
+torchrun --nproc_per_node=2 sdmae_pretrain_ddp.py
+```
+You can use tensorboard to visualize the pretraining process:
+```
+tensorboard --logdir=/path/log_folder/SummaryWriter --port=6061
+```
+Then link it to your PC through ssh:
+```
+ssh -NfL (port of your PC):127.0.0.1:6061 username@host -p port
+```
+
+### 4. Quick start to use our semantic segmentation model SBFNet with SDMAE
+```
+python train_SDSBFNet.py
+```
+
+<!-- ***
+## Citation
+<b> Please kindly cite the papers if this code is useful and helpful for your research. </b>
+
+J. Luo, J. Li, X. Chu, S. Yang, L. Tao and Q. Shi, "BTCDNet: Bayesian Tile Attention Network for Hyperspectral Image Change Detection," in IEEE Geoscience and Remote Sensing Letters, vol. 22, pp. 1-5, 2025, Art no. 5504205, doi: 10.1109/LGRS.2025.3563897.
+
+```
+@article{luo2025btcdnet,
+  title={BTCDNet: Bayesian Tile Attention Network for Hyperspectral Image Change Detection},
+  author={Luo, Junshen and Li, Jiahe and Chu, Xinlin and Yang, Sai and Tao, Lingjun and Shi, Qian},
+  journal={IEEE Geoscience and Remote Sensing Letters},
+  year={2025},
+  publisher={IEEE}
+}
+```
+
+***
+## Contact Information
+Junshen Luo: luojsh7@mail2.sysu.edu.cn
+
+Junshen Luo is with School of Geography and Planning, Sun Yat-sen University, Guangzhou 510275, China
+*** -->
