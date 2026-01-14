@@ -31,9 +31,9 @@ if __name__ == '__main__':
     parser.add_argument('--sdmask_ratio', type=float, default=0.9)
     parser.add_argument('--total_epoch', type=int, default=99)
     parser.add_argument('--warmup_epoch', type=int, default=10)
-    parser.add_argument('--data_list_path', type=str, default='data/PRD289K/list')
-    parser.add_argument('--pretrained_model_path', type=str, default='checkpoints/PRD289K/vit-b-sdmae-noe-1-dict.pth')
-    parser.add_argument('--save_model_path', type=str, default='checkpoints/PRD289K/vit-b-sdmae-noe.pt')
+    parser.add_argument('--data_list_path', type=str, default='data/PRD262K/list')
+    parser.add_argument('--pretrained_model_path', type=str, default='')
+    parser.add_argument('--save_model_path', type=str, default='checkpoints/PRD262K/vit-b-sdmae-nov.pt')
 
     args = parser.parse_args()
     setup_seed(args.seed)
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     device = torch.device("cuda", local_rank)
 
     time_now = time.localtime()
-    logs_folder = os.path.join("logs/PRD289K", time.strftime("%Y-%m-%d-%H-%M-%S", time_now))
+    logs_folder = os.path.join("logs/PRD262K", time.strftime("%Y-%m-%d-%H-%M-%S", time_now))
     if local_rank == 0:
         os.makedirs(logs_folder)
     input_shape = [args.input_shape, args.input_shape]
@@ -141,5 +141,5 @@ if __name__ == '__main__':
     dist.destroy_process_group()  # 消除进程组，和 init_process_group 相对
 
 # torchrun --nproc_per_node=4 sdmae_pretrain_ddp.py
-# tensorboard --logdir=/home/ljs/PRD-RSMAE/PRD-RSMAE/logs/PRD289K/2024-06-13-20-49-07_SDMAE_noe/SummaryWriter --port=6063
+# tensorboard --logdir=/home/ljs/PRD-RSMAE/PRD-RSMAE/logs/PRD262K/2024-06-13-20-49-07_SDMAE_noe/SummaryWriter --port=6063
 # ssh -NfL 8084:127.0.0.1:6063 ljs@172.18.206.54 -p 6522
