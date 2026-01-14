@@ -16,7 +16,7 @@ import torch.multiprocessing as mp
 from torch.cuda.amp import GradScaler
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
-os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

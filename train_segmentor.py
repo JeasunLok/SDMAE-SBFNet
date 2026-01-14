@@ -17,7 +17,7 @@ import torch.distributed as dist
 from torch.cuda.amp import GradScaler
 import warnings
 warnings.filterwarnings("ignore")
-os.environ['CUDA_VISIBLE_DEVICES'] = '1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 #-------------------------------------------------------------------------------
 # train model
 def train_epoch(model, train_loader, criterion, optimizer, e, epoch, device, num_classes, scaler, fp16, ignore_index=None):
@@ -156,9 +156,9 @@ if __name__ == "__main__":
     distributed = True
     sync_bn = True
     fp16 = True
-    test = False
+    test = True
 
-    num_classes = 9
+    num_classes = 8
 
     model_pretrained = False
     model_path = r""
