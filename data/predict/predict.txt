@@ -1,8 +1,0 @@
-/mnt/ImarsData/ljs/PRD289K/F49E010023_Level_17_1548.TIF
-/mnt/ImarsData/ljs/PRD289K/F49E011022_Level_17_1570.TIF
-/mnt/ImarsData/ljs/PRD289K/F50E006006_Level_17_1522.TIF
-/mnt/ImarsData/ljs/PRD289K/F49E011017_Level_17_422.TIF
-/mnt/ImarsData/ljs/PRD289K/F50E010003_Level_17_484.TIF
-/mnt/ImarsData/ljs/PRD289K/F50E005003_Level_17_907.TIF
-/mnt/ImarsData/ljs/PRD289K/G49E024019_Level_17_1470.TIF
-/mnt/ImarsData/ljs/PRD289K/F49E004015_Level_17_1324.TIF
