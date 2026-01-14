@@ -68,8 +68,8 @@ class SegDataset(Dataset):
         annotation_line = self.annotation_lines[index]
         name_label = annotation_line.split()[0]
         # name_image = name_label.replace("label", "image").split(".")[0] + ".png" # LoveDA
-        name_image = name_label.replace("label", "image").split(".")[0] + ".tif" # DLRSD
-        # name_image = name_label.replace("label", "image").split(".")[0] + ".jpg" # WHDLD
+        # name_image = name_label.replace("label", "image").split(".")[0] + ".tif" # DLRSD
+        name_image = name_label.replace("label", "image").split(".")[0] + ".jpg" # WHDLD PRDLC
 
         image = Image.open(name_image)
         label = Image.open(name_label)
@@ -101,8 +101,8 @@ class SDSegDataset(Dataset):
         annotation_line = self.annotation_lines[index]
         name_label = annotation_line.split()[0]
         # name_image = name_label.replace("label", "image").split(".")[0] + ".png" # LoveDA
-        name_image = name_label.replace("label", "image").split(".")[0] + ".tif" # DLRSD
-        # name_image = name_label.replace("label", "image").split(".")[0] + ".jpg" # WHDLD
+        # name_image = name_label.replace("label", "image").split(".")[0] + ".tif" # DLRSD
+        name_image = name_label.replace("label", "image").split(".")[0] + ".jpg" # WHDLD PRDLC
 
         image = Image.open(name_image)
         label = Image.open(name_label)
