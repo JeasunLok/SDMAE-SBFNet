@@ -60,38 +60,35 @@ def detect_edges_with_laplacian_and_otsu(standardized_image):
     binary_edges = otsu > 0
     return binary_edges 
 
-# 读取tif
-def read_tif(path):
-    dataset = gdal.Open(path)
-    cols = dataset.RasterXSize # 图像长度
-    rows = dataset.RasterYSize # 图像宽度
-    im_proj = (dataset.GetProjection()) # 读取投影
-    im_Geotrans = (dataset.GetGeoTransform()) # 读取仿射变换
-    im_data = dataset.ReadAsArray(0, 0, cols, rows) # 转为numpy格式
-    if len(im_data.shape)<3:
-        im_data = np.expand_dims(im_data, 0)
-    im_data = np.transpose(im_data, [1, 2, 0])
-    del dataset
-    return im_data, im_Geotrans, im_proj, cols, rows
+import rasterio
 
-# 写出tif
-def write_tif(newpath, im_data, im_geotrans, im_proj, datatype):
-    # datatype常用gdal.GDT_UInt16 gdal.GDT_Int16 gdal.GDT_Float32
-    if len(im_data.shape)==3:
-        im_bands, im_height, im_width = im_data.shape
-    else:
-        im_bands, (im_height, im_width) = 1, im_data.shape
-    driver = gdal.GetDriverByName('GTiff')
-    new_dataset = driver.Create(newpath, im_width, im_height, im_bands, datatype)
-    new_dataset.SetGeoTransform(im_geotrans)
-    new_dataset.SetProjection(im_proj)
+# read tif
+def read_tif(file_path):
+    with rasterio.open(file_path) as dataset:
+        im_data = dataset.read()  
+        if len(im_data) == 2:  
+            im_data = im_data[np.newaxis, :, :]  
+        im_data = np.transpose(im_data, [1, 2, 0])  
+        im_proj = dataset.crs 
+        im_geotrans = dataset.transform  
+        cols, rows = dataset.width, dataset.height
+    return im_data, im_geotrans, im_proj, cols, rows
 
-    if im_bands == 1:
-        new_dataset.GetRasterBand(1).WriteArray(np.squeeze(im_data, axis=0))
-    else:
-        for i in range(im_bands):
-            new_dataset.GetRasterBand(i+1).WriteArray(im_data[i])
-    del new_dataset
+
+# write tif
+def write_tif(file_path, im_data, im_geotrans, im_proj):
+    if len(im_data) == 2:  
+        im_data = im_data[:, :, np.newaxis]  
+    bands = im_data.shape[2]
+    height = im_data.shape[0]
+    width = im_data.shape[1]
+    datatype = im_data.dtype 
+
+    with rasterio.open(file_path, 'w', driver='GTiff', height=height, 
+                       width=width, count=bands, 
+                       dtype=datatype, crs=im_proj, transform=im_geotrans) as new_dataset:
+        for i in range(bands):
+            new_dataset.write(im_data[:, :, i], i + 1)
 
 def init_ddp(local_rank):
     '''
