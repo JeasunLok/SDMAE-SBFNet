@@ -1,4 +1,4 @@
-# BTCDNet: Bayesian Tile Attention Network for Hyperspectral Image Change Detection
+# Investigating Very High Resolution Land Cover Mapping in the Pearl River Delta with Remote Sensing Foundation Model and Multi-Source Data Bayesian Fusion
 
 ***
 # Introduction
