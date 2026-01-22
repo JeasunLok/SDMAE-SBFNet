@@ -1,15 +1,16 @@
 # Investigating Very High Resolution Land Cover Mapping in the Pearl River Delta with Remote Sensing Foundation Model and Multi-Source Data Bayesian Fusion
 
 ***
-# Introduction
+## Introduction
 
 <!-- <b> Official implementation of [SDMAE-SBFNet](https://ieeexplore.ieee.org/document/10975807) by [Junshen Luo](https://github.com/JeasunLok), Jiahe Li, Xinlin Chu, Sai Yang, Lingjun Tao and Qian Shi. </b> -->
-<b> Official implementation of SDMAE-SBFNet by [Junshen Luo](https://github.com/JeasunLok). </b>
+<b> Official implementation of SDMAE and SBFNet for VHR land cover mapping by [Junshen Luo](https://github.com/JeasunLok), Yikai Zhao, Mingyang Xuan, Jizhou Zhen, Yan Zhou* and Xiaoping Liu. </b>
+***
+![](images/SDMAE.jpg)
+***
+![](images/SBFNet.jpg)
 ***
 
-<!-- ![](images/btcdnet.png) -->
-
-***
 ## How to use it?
 ### 1. Installation
 ```
@@ -21,13 +22,9 @@ pip install -r requirements.txt
 
 ### 2. Download our datasets
 
-Download our datasets then place them in the correct path of `data` folder:
+Download our datasets and run `generate_list_pretrained.py` or `generate_list_segmentation.py` to generate the data lists. Then place the lists in the correct path of `data` folder:
 
-Baiduyun:
-
-Zenorg:
-
-And run `generate_list_pretrained.py` or `generate_list_pretrained.py` to generate the data lists.
+Zenodo: https://doi.org/10.5281/zenodo.18301135.
 
 ### 3. Quick start to use our pretraining model SDMAE
 
@@ -63,11 +60,11 @@ J. Luo, J. Li, X. Chu, S. Yang, L. Tao and Q. Shi, "BTCDNet: Bayesian Tile Atten
   year={2025},
   publisher={IEEE}
 }
-```
+``` -->
 
 ***
 ## Contact Information
 Junshen Luo: luojsh7@mail2.sysu.edu.cn
 
 Junshen Luo is with School of Geography and Planning, Sun Yat-sen University, Guangzhou 510275, China
-*** -->
+***
