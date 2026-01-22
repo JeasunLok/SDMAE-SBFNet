@@ -6,7 +6,6 @@ import math
 from functools import partial
 from torch import nn, einsum
 from einops import rearrange, reduce, repeat, parse_shape
-import scipy as sp
 
 # ====================== UNet ====================
 

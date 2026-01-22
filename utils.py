@@ -14,7 +14,6 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.nn.functional as F
 import torch.nn as nn
-from osgeo import gdal
 
 class FocalLoss(nn.Module):  
     def __init__(self, alpha=0.5, gamma=2, reduction='mean', ignore_index=0):  

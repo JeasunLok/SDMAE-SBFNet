@@ -1,5 +1,4 @@
 import torch
-import timm
 import numpy as np
 import math
 import cv2
