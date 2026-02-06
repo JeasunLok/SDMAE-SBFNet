@@ -11,7 +11,7 @@ import time
 import torch.backends.cudnn as cudnn
 from tqdm import tqdm
 from dataloader import *
-from model import *
+from models import *
 from torch.utils.data import DataLoader
 
 import torch.distributed as dist
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     distributed = True
     sync_bn = True
     fp16 = True
-    test = True
+    test = False
 
     num_classes = 8 # LoveDA:7 DLRSD:17 WHDLD:6 PRDLC:8
 

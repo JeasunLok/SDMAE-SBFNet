@@ -11,7 +11,7 @@ import time
 import torch.backends.cudnn as cudnn
 from tqdm import tqdm
 from dataloader import *
-from model import *
+from models import *
 from torch.utils.data import DataLoader
 
 import torch.distributed as dist

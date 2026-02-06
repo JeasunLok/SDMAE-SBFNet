@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms import ToTensor, Compose, Normalize
 from tqdm import tqdm
 from dataloader import *
-from model import *
+from models import *
 from utils import setup_seed
 
 if __name__ == '__main__':
