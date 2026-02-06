@@ -6,9 +6,16 @@
 <!-- <b> Official implementation of [SDMAE-SBFNet](https://ieeexplore.ieee.org/document/10975807) by [Junshen Luo](https://github.com/JeasunLok), Jiahe Li, Xinlin Chu, Sai Yang, Lingjun Tao and Qian Shi. </b> -->
 <b> Official implementation of SDMAE and SBFNet for VHR land cover mapping by [Junshen Luo](https://github.com/JeasunLok), Yikai Zhao, Mingyang Xuan, Jizhou Zhen, Yan Zhou* and Xiaoping Liu. </b>
 ***
-![](images/SDMAE.jpg)
+<div align="center">
+    <img src="images/SDMAE.jpg" width="90%" alt="SDMAE">
+</div>
+
 ***
-![](images/SBFNet.jpg)
+
+<div align="center">
+    <img src="images/SBFNet.jpg" width="90%" alt="SBFNet">
+</div>
+
 ***
 
 ## How to use it?
@@ -22,9 +29,11 @@ pip install -r requirements.txt
 
 ### 2. Download our datasets
 
-Download our datasets and run `generate_list_pretrained.py` or `generate_list_segmentation.py` to generate the data lists. Then place the lists in the correct path of `data` folder:
+Download our datasets from Zenodo:
 
 Zenodo: https://doi.org/10.5281/zenodo.18301135.
+
+Then run `generate_list_pretrained.py` or `generate_list_segmentation.py` to generate the data lists and place the them in the correct path of `data` folder. You can also adjust the path in the source code to sucessfully load the data.
 
 ### 3. Quick start to use our pretraining model SDMAE
 
@@ -42,8 +51,39 @@ ssh -NfL (port of your PC):127.0.0.1:6061 username@host -p port
 ```
 
 ### 4. Quick start to use our semantic segmentation model SBFNet with SDMAE
+<b> Once you successfully pretrained SDMAE</b>, you can use the encoder of pretrained model by changing the `encoder_path` in `train_SDSBFNet.py` to train SBFNet:
 ```
-python train_SDSBFNet.py
+torchrun --nproc_per_node=2 train_SDSBFNet.py
+```
+
+### 5. More information
+For pretraining:
+```
+torchrun --nproc_per_node=2 mae_pretrain_ddp.py --help
+```
+For fine-tuning, you can change the parameters in `train_SDSBFNet.py` then:
+```
+torchrun --nproc_per_node=2 train_SDSBFNet.py
+```
+For other comparative models, see `compared_models.py` then:
+```
+torchrun --nproc_per_node=2 train_compared_models.py
+```
+For ablation study of SDMAE, see `models.py` then:
+```
+torchrun --nproc_per_node=2 mae_pretrain_ddp.py # pretrain MAE
+torchrun --nproc_per_node=2 train_SBFNet.py # fine-tune MAE-SBFNet 
+torchrun --nproc_per_node=2 sdmae_pretrain_ddp_ablation_noe.py # pretrain MAE with VMask Strategy
+torchrun --nproc_per_node=2 train_SDSBFNet_noe.py # fine-tune MAE with VMask Strategy
+torchrun --nproc_per_node=2 sdmae_pretrain_ddp_ablation_nov.py # pretrain MAE with Edge Enhanced Loss
+torchrun --nproc_per_node=2 train_SDSBFNet_nov.py # fine-tune MAE with Edge Enhanced Loss
+```
+For ablation study of SBFNet, see `models.py` then:
+```
+torchrun --nproc_per_node=2 train_SDSBFNet_ablation_no.py # only FBM
+torchrun --nproc_per_node=2 train_SDSBFNet_ablation_noGSBM.py # FBM + SBM
+torchrun --nproc_per_node=2 train_SDSBFNet_ablation_noFBM.py # FBM + GSBM
+torchrun --nproc_per_node=2 train_SDSBFNet.py # SBFNet: FBM + SBM + GSBM
 ```
 
 <!-- ***
