@@ -669,8 +669,377 @@ class SDSBFNet(torch.nn.Module):
         final_out = self.alpha * x + self.beta * global_scene_embedding
 
         return final_out, x, global_scene_embedding
+    
+class SDSBFNet_1(torch.nn.Module):
+    def __init__(self, encoder : SDMAE_Encoder, out_channels=10, downsample_factor=16, features=[512, 256, 128, 64, 32]) -> None: 
+        super().__init__()
+        self.cls_token = encoder.cls_token
+        self.pos_embedding = encoder.pos_embedding
+        self.patchify = encoder.patchify
+        self.transformer = encoder.transformer
+        self.layer_norm = encoder.layer_norm
+        self.downsample_factor = downsample_factor
+        self.sdmask_ratio = encoder.sdmask_ratio
+        in_channels = encoder.emb_dim
+        self.alpha = torch.nn.Parameter(torch.tensor(0.0))
+        self.beta = torch.nn.Parameter(torch.tensor(0.0))
+        
+        self.mask_conv_encoder = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, in_channels, 1, padding=0),
+                    torch.nn.BatchNorm2d(in_channels),
+                    torch.nn.ReLU(inplace=True),
+                )
 
+        self.decoder_1 = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, features[0], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[0]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_2 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[0], features[1], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[1]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_3 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[1], features[2], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[2]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_4 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[2], features[3], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[3]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
 
+        self.decoder_5 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[3], features[4], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[4]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        
+        self.scene_1 = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, 1, 1, padding=0),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        
+        self.scene_2 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[0], 1, 1, padding=0),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        
+        self.scene_3 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[1], 1, 1, padding=0),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        
+        self.scene_4 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[2], 1, 1, padding=0),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        
+        self.scene_5 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[3], 1, 1, padding=0),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+    
+        if self.downsample_factor == 8:
+            self.final_out = torch.nn.Conv2d(features[-2], out_channels, 3, padding=1)
+        elif self.downsample_factor == 16:
+            self.final_out = torch.nn.Conv2d(features[-1], out_channels, 3, padding=1)
+        else:
+            raise ValueError("downsample factor which depends on your image size and patch size can only be 8 or 16.")
+
+    def forward(self, img, v_image):
+        (B, C, H, W) = v_image.shape
+        k = int((self.sdmask_ratio+0.25*(1-self.sdmask_ratio)) * H * W)
+        t = int((0.25*(1-self.sdmask_ratio)) * H * W)
+        percentile_big_values, _ = torch.kthvalue(v_image.view(B, -1), k, dim=1)
+        percentile_small_values, _ = torch.kthvalue(v_image.view(B, -1), t, dim=1)
+        v_mask_big = (v_image <= percentile_big_values.view(B, 1, 1, 1)).int().view(B, C, H, W) 
+        v_mask_small = (v_image >= percentile_small_values.view(B, 1, 1, 1)).int().view(B, C, H, W) 
+        v_mask = v_mask_big & v_mask_small
+
+        mask_random = torch.randint_like(v_mask_big, 0 ,100) < int((self.sdmask_ratio+0.5*(1-self.sdmask_ratio))*100)
+        v_mask = v_mask & mask_random
+        v_img = (1-v_mask) * img
+
+        patches = self.patchify(img)
+        mask_patches = self.patchify(v_img)
+
+        patches = rearrange(patches, 'b c h w -> (h w) b c')
+        mask_patches = rearrange(mask_patches, 'b c h w -> (h w) b c')
+
+        patches = patches + self.pos_embedding
+        mask_patches = mask_patches + self.pos_embedding
+        mask_patches = rearrange(mask_patches, '(h w) b c -> b c h w', h=int(math.sqrt(mask_patches.shape[0])), w=int(math.sqrt(mask_patches.shape[0])))
+
+        patches = rearrange(patches, 't b c -> b t c')
+
+        features = self.layer_norm(self.transformer(patches))
+        mask_features = self.mask_conv_encoder(mask_patches)
+
+        features = rearrange(features, 'b t c -> b c t')
+        features = rearrange(features, 'b c (h w) -> b c h w', h=int(math.sqrt(features.shape[-1])), w=int(math.sqrt(features.shape[-1])))
+        features = features + mask_features
+
+        feature_scene1 = self.scene_1(features)
+        x = self.decoder_1(features)
+
+        feature_scene2 = self.scene_2(x+feature_scene1)
+        x = self.decoder_2(x+feature_scene1)
+
+        feature_scene3 = self.scene_3(x+feature_scene2)
+        x = self.decoder_3(x+feature_scene2)
+
+        feature_scene4 = self.scene_4(x+feature_scene3)
+        x = self.decoder_4(x+feature_scene3)
+
+        if self.downsample_factor == 16:
+            feature_scene5 = self.scene_5(x+feature_scene4)
+            x = self.decoder_5(x+feature_scene4)
+            x = self.final_out(x+feature_scene5)
+        else:
+            x = self.final_out(x+feature_scene4)
+
+        return x
+
+class SDSBFNet_2(torch.nn.Module):
+    def __init__(self, encoder : SDMAE_Encoder, out_channels=10, downsample_factor=16, features=[512, 256, 128, 64, 32]) -> None: 
+        super().__init__()
+        self.cls_token = encoder.cls_token
+        self.pos_embedding = encoder.pos_embedding
+        self.patchify = encoder.patchify
+        self.transformer = encoder.transformer
+        self.layer_norm = encoder.layer_norm
+        self.downsample_factor = downsample_factor
+        self.sdmask_ratio = encoder.sdmask_ratio
+        in_channels = encoder.emb_dim
+        self.alpha = torch.nn.Parameter(torch.tensor(0.0))
+        self.beta = torch.nn.Parameter(torch.tensor(0.0))
+        
+        self.mask_conv_encoder = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, in_channels, 1, padding=0),
+                    torch.nn.BatchNorm2d(in_channels),
+                    torch.nn.ReLU(inplace=True),
+                )
+
+        self.decoder_1 = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, features[0], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[0]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_2 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[0], features[1], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[1]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_3 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[1], features[2], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[2]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_4 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[2], features[3], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[3]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+
+        self.decoder_5 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[3], features[4], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[4]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        
+        self.origin_scene_embedding = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, out_channels, 1, padding=0),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=self.downsample_factor*2, mode="bilinear", align_corners=True)
+                )
+
+        if self.downsample_factor == 8:
+            self.final_out = torch.nn.Conv2d(features[-2], out_channels, 3, padding=1)
+        elif self.downsample_factor == 16:
+            self.final_out = torch.nn.Conv2d(features[-1], out_channels, 3, padding=1)
+        else:
+            raise ValueError("downsample factor which depends on your image size and patch size can only be 8 or 16.")
+
+    def forward(self, img, v_image):
+        (B, C, H, W) = v_image.shape
+        k = int((self.sdmask_ratio+0.25*(1-self.sdmask_ratio)) * H * W)
+        t = int((0.25*(1-self.sdmask_ratio)) * H * W)
+        percentile_big_values, _ = torch.kthvalue(v_image.view(B, -1), k, dim=1)
+        percentile_small_values, _ = torch.kthvalue(v_image.view(B, -1), t, dim=1)
+        v_mask_big = (v_image <= percentile_big_values.view(B, 1, 1, 1)).int().view(B, C, H, W) 
+        v_mask_small = (v_image >= percentile_small_values.view(B, 1, 1, 1)).int().view(B, C, H, W) 
+        v_mask = v_mask_big & v_mask_small
+
+        mask_random = torch.randint_like(v_mask_big, 0 ,100) < int((self.sdmask_ratio+0.5*(1-self.sdmask_ratio))*100)
+        v_mask = v_mask & mask_random
+        v_img = (1-v_mask) * img
+
+        patches = self.patchify(img)
+        mask_patches = self.patchify(v_img)
+
+        patches = rearrange(patches, 'b c h w -> (h w) b c')
+        mask_patches = rearrange(mask_patches, 'b c h w -> (h w) b c')
+
+        patches = patches + self.pos_embedding
+        mask_patches = mask_patches + self.pos_embedding
+        mask_patches = rearrange(mask_patches, '(h w) b c -> b c h w', h=int(math.sqrt(mask_patches.shape[0])), w=int(math.sqrt(mask_patches.shape[0])))
+
+        patches = rearrange(patches, 't b c -> b t c')
+
+        features = self.layer_norm(self.transformer(patches))
+        mask_features = self.mask_conv_encoder(mask_patches)
+
+        features = rearrange(features, 'b t c -> b c t')
+        features = rearrange(features, 'b c (h w) -> b c h w', h=int(math.sqrt(features.shape[-1])), w=int(math.sqrt(features.shape[-1])))
+        features = features + mask_features
+
+        # Scene Based Decoder
+        global_scene_embedding = self.origin_scene_embedding(features)
+
+        x = self.decoder_1(features)
+
+        x = self.decoder_2(x)
+
+        x = self.decoder_3(x)
+
+        x = self.decoder_4(x)
+
+        if self.downsample_factor == 16:
+            x = self.decoder_5(x)
+            x = self.final_out(x)
+        else:
+            x = self.final_out(x)
+
+        final_out = self.alpha * x + self.beta * global_scene_embedding
+
+        return final_out, x, global_scene_embedding
+
+class SDSBFNet_3(torch.nn.Module):
+    def __init__(self, encoder : SDMAE_Encoder, out_channels=10, downsample_factor=16, features=[512, 256, 128, 64, 32]) -> None: 
+        super().__init__()
+        self.cls_token = encoder.cls_token
+        self.pos_embedding = encoder.pos_embedding
+        self.patchify = encoder.patchify
+        self.transformer = encoder.transformer
+        self.layer_norm = encoder.layer_norm
+        self.downsample_factor = downsample_factor
+        self.sdmask_ratio = encoder.sdmask_ratio
+        in_channels = encoder.emb_dim
+        self.alpha = torch.nn.Parameter(torch.tensor(0.0))
+        self.beta = torch.nn.Parameter(torch.tensor(0.0))
+        
+        self.mask_conv_encoder = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, in_channels, 1, padding=0),
+                    torch.nn.BatchNorm2d(in_channels),
+                    torch.nn.ReLU(inplace=True),
+                )
+
+        self.decoder_1 = torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels, features[0], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[0]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_2 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[0], features[1], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[1]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_3 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[1], features[2], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[2]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+        self.decoder_4 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[2], features[3], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[3]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+
+        self.decoder_5 = torch.nn.Sequential(
+                    torch.nn.Conv2d(features[3], features[4], 3, padding=1),
+                    torch.nn.BatchNorm2d(features[4]),
+                    torch.nn.ReLU(inplace=True),
+                    torch.nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+                )
+    
+        if self.downsample_factor == 8:
+            self.final_out = torch.nn.Conv2d(features[-2], out_channels, 3, padding=1)
+        elif self.downsample_factor == 16:
+            self.final_out = torch.nn.Conv2d(features[-1], out_channels, 3, padding=1)
+        else:
+            raise ValueError("downsample factor which depends on your image size and patch size can only be 8 or 16.")
+
+    def forward(self, img, v_image):
+        (B, C, H, W) = v_image.shape
+        k = int((self.sdmask_ratio+0.25*(1-self.sdmask_ratio)) * H * W)
+        t = int((0.25*(1-self.sdmask_ratio)) * H * W)
+        percentile_big_values, _ = torch.kthvalue(v_image.view(B, -1), k, dim=1)
+        percentile_small_values, _ = torch.kthvalue(v_image.view(B, -1), t, dim=1)
+        v_mask_big = (v_image <= percentile_big_values.view(B, 1, 1, 1)).int().view(B, C, H, W) 
+        v_mask_small = (v_image >= percentile_small_values.view(B, 1, 1, 1)).int().view(B, C, H, W) 
+        v_mask = v_mask_big & v_mask_small
+
+        mask_random = torch.randint_like(v_mask_big, 0 ,100) < int((self.sdmask_ratio+0.5*(1-self.sdmask_ratio))*100)
+        v_mask = v_mask & mask_random
+        v_img = (1-v_mask) * img
+
+        patches = self.patchify(img)
+        mask_patches = self.patchify(v_img)
+
+        patches = rearrange(patches, 'b c h w -> (h w) b c')
+        mask_patches = rearrange(mask_patches, 'b c h w -> (h w) b c')
+
+        patches = patches + self.pos_embedding
+        mask_patches = mask_patches + self.pos_embedding
+        mask_patches = rearrange(mask_patches, '(h w) b c -> b c h w', h=int(math.sqrt(mask_patches.shape[0])), w=int(math.sqrt(mask_patches.shape[0])))
+
+        patches = rearrange(patches, 't b c -> b t c')
+
+        features = self.layer_norm(self.transformer(patches))
+        mask_features = self.mask_conv_encoder(mask_patches)
+
+        features = rearrange(features, 'b t c -> b c t')
+        features = rearrange(features, 'b c (h w) -> b c h w', h=int(math.sqrt(features.shape[-1])), w=int(math.sqrt(features.shape[-1])))
+        features = features + mask_features
+
+        x = self.decoder_1(features)
+
+        x = self.decoder_2(x)
+
+        x = self.decoder_3(x)
+
+        x = self.decoder_4(x)
+
+        if self.downsample_factor == 16:
+            x = self.decoder_5(x)
+            x = self.final_out(x)
+        else:
+            x = self.final_out(x)
+
+        return x
+    
 if __name__ == '__main__':
     model_type = "SDSBFNet"
     if model_type == "Pretrained":
