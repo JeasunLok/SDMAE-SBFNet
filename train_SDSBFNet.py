@@ -170,7 +170,7 @@ if __name__ == "__main__":
     model_pretrained = False
     model_path = r""
     encoder_pretrained = True
-    encoder_path = r"checkpoints/PRD289K/sdmae/vit-b-sdmae-100.pt"
+    encoder_path = r"checkpoints/PRD262K/sdmae/vit-b-sdmae-100.pt"
     freeze_encoder = False
 
     input_shape = [512, 512]

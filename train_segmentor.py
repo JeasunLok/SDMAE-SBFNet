@@ -163,7 +163,7 @@ if __name__ == "__main__":
     model_pretrained = False
     model_path = r""
     encoder_pretrained = True
-    encoder_path = r"checkpoints/PRD289K/vit-b-mae-200.pt"
+    encoder_path = r"checkpoints/PRD262K/vit-b-mae-200.pt"
     freeze_encoder = False
     
 

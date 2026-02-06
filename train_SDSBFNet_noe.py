@@ -170,7 +170,7 @@ if __name__ == "__main__":
     model_pretrained = False
     model_path = r""
     encoder_pretrained = True
-    encoder_path = r"checkpoints/PRD289K/sdmae_noe/vit-b-sdmae-noe-100-dict.pth"
+    encoder_path = r"checkpoints/PRD262K/sdmae_noe/vit-b-sdmae-noe-100-dict.pth"
     freeze_encoder = False
     
 
